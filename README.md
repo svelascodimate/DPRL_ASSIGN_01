@@ -19,13 +19,23 @@ Wandb was used to log the total accuracy and loss metrics, as well as local acur
 
 ## Installation
 - create pyenv: 
-    ```python -m venv .venv```
+    ```bash
+    python -m venv .venv
+    ```
 - Launch virtual environment:   
-    ```source venv/bin/activate```
+    ```bash
+    source venv/bin/activate
+    ```
 - Isntall dependencies> 
-    ```pip install -r requirements.txt```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## Run the models
 - Execute the follwing commands:
-    ```python3 conv2d-DPP.py```
-    ```python3 resnet-18-DPP.py```
+    ```bash
+    python3 conv2d-DPP.py
+    ```
+    ```bash
+    python3 resnet-18-DPP.py
+    ```
