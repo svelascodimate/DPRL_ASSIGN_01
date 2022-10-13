@@ -14,17 +14,19 @@ Both architectures were trained usinng pytorch Distributed Data Parallel (DPP)
 Wandb was used to log the total accuracy and loss metrics, as well as local acuracy, precision, recall and F1 for each CIPHAR10 class.
 
 ## Prerequeisites - Deep Representation Learning. 
+- Conda
+- Mamba
 - PyTorch
 - NVIDIA GPU (gloo)
 
 ## Installation
-- create pyenv: 
+- create virtual environment: 
     ```bash
-    python -m venv .venv
+    mamba create -n assign01
     ```
 - Launch virtual environment:   
     ```bash
-    source venv/bin/activate
+    conda activate assign01
     ```
 - Isntall dependencies> 
     ```bash

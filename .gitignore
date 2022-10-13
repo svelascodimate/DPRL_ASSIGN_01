@@ -161,5 +161,10 @@ cython_debug/
 
 .trained/
 .data/
+data/
+trained/
+wandb/
+.wandb/
+
 
 

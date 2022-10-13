@@ -18,6 +18,7 @@ import sys
 import tempfile
 import torch.distributed as dist
 import torch.multiprocessing as mp
+import wandb
 
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -55,10 +56,6 @@ def _load_data(DATA_PATH, batch_size, world_size, rank):
     
     return train_loader, test_loader
 
-"""## Defining classes for RESNET classifier"""
-
-ciphar_classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
 def _compute_counts(y_pred, y_batch, mode='train'):
     return (y_pred==y_batch).sum().item()
 
@@ -88,6 +85,17 @@ def cleanup():
 """## Main """
 
 def train_model(rank, args):
+    ## Defining classes for CNN classifier
+    ciphar_classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+    wandb.init(project='DPRL_ASSIGN_01', 
+            config={
+                   "epochs": args.num_epoches,
+                   "batch_size": args.batch_size,
+                   "lr": args.learning_rate,
+                   "decay": args.decay, 
+                   "world_size":args.world_size
+                   }, name='resnet-18-DPP')
 
     # DPP initialization
     print(f"Running Distributed ResNet on rank {rank}.")
@@ -155,7 +163,7 @@ def train_model(rank, args):
               ##----------------------------------------------------------
               if iteration%10==0:
                 print('iter: {} loss: {}, accy: {}'.format(iteration, loss.item(), accy))
-        
+                wandb.log({'epoch': epoch,'iteration': iteration, 'loss':loss.item(), 'accuracy':accy})
 
     ##------------------------------------
     ##    model testing code below
@@ -179,17 +187,46 @@ def train_model(rank, args):
             ##---------------------------------------------------
             total += len(y_labels)
             accy_count += _compute_counts(y_pred, y_labels)
+
+            ##--------------------------------------------------
+            ## Step 10: Wandb Confussion Matrix
+            ##---------------------------------------------------
+            wandb.log({"conf_mat" : wandb.plot.confusion_matrix(probs=None,
+                        y_true=y_labels.cpu().numpy(), preds=y_pred.cpu().numpy(),
+                        class_names=ciphar_classes)})
+            
+            ##--------------------------------------------------
+            ## Step 11: Confussion Matrix
+            ##---------------------------------------------------
+            for y_label_idx, y_label in enumerate(y_labels):
+              confusion_matrix[y_label.item(), y_pred[y_label_idx].item()] += 1
             
     # this condition ensures that processes do not trample each other and corrupt the files by overwriting
     if rank == 0:
-        print("Loss: {}, Testing Accuracy: {}".format(loss.item(), accy_count / total))
-        testAccuracy = 100*accy_count/total
-
+        testAccuracy = accy_count / total
+        print("Loss: {}, Testing Accuracy: {}".format(loss.item(), testAccuracy))
+        
         # Saving the model
         state = {'model': model.state_dict(), 'test_accuracy': testAccuracy, 'num_epochs' : args.num_epoches}
         if not os.path.exists('./trained'):
             os.mkdir('./trained')
-        torch.save(state, './trained/ciphar10-resnet18.pth')
+        torch.save(state, './trained/ciphar10-resnet.pth')
+
+        metric_table = wandb.Table(columns=['label', 'accuracy', 'precision', 'recall', 'f1_score'])
+        label_accuracies = np.zeros(len(ciphar_classes))
+        print('{0:10s} - {1}'.format('Category','Accuracy'))
+        for i, r in enumerate(confusion_matrix):
+            label_accuracies[i] = r[i]/np.sum(r)
+            print('{0:10s} - {1:.1f}'.format(ciphar_classes[i], label_accuracies[i]))
+
+        for label_idx, label in enumerate(ciphar_classes):
+            true_positives = confusion_matrix[label_idx, label_idx]
+            precision =  true_positives/(np.sum(confusion_matrix, axis=0)[label_idx])
+            recall = true_positives/(np.sum(confusion_matrix, axis=1)[label_idx])
+            f1_score = (2*precision*recall)/(precision+recall)
+            metric_table.add_data(label,label_accuracies[label_idx], precision, recall, f1_score)
+    
+        wandb.log({"metrics": metric_table})  
 
     cleanup()
 
@@ -210,6 +247,9 @@ def run_train_model(training_func, world_size):
   parser.add_argument('--num_epoches', type=int, default=num_epoches, help='Total number of epochs for training')
   parser.add_argument('--decay', type=int, default=decay, help='Total number of decay for training')
   args = parser.parse_args()
+
+  ## Wandb initialization
+  wandb.login()
 
   mp.spawn(training_func, 
            args=(args,), 

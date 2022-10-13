@@ -2,14 +2,46 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-def conv3x3(inplanes, outplanes, stride=1, padding=1):
-    return nn.Conv2d(in_channels=inplanes, out_channels=outplanes, kernel_size=3, stride=stride, padding=padding,
+def conv3x3(in_channels, out_channels, stride=1, padding=1):
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=stride, padding=padding,
                      bias=False)
 
 
-def conv1x1(inplanes, outplanes, stride=1):
-    return nn.Conv2d(in_channels=inplanes, out_channels=outplanes, kernel_size=1, stride=stride, bias=False)
+def conv1x1(inplanes, out_channels, stride=1):
+    return nn.Conv2d(in_channels=inplanes, out_channels=out_channels, kernel_size=1, stride=stride, bias=False)
 
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1, padding=1):
+        super().__init__()
+        self.stride_look = stride
+        self.conv1 = conv3x3(in_channels, out_channels, stride=stride)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.dropout_1 = nn.Dropout(0.2)
+        
+        self.conv2 = conv3x3(in_channels, out_channels, stride=1)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.dropout_2 = nn.Dropout(0.2)
+
+
+        self.residule = nn.Sequential()
+        # needs 1x1 conv to convert dimensions
+        if stride != 1 or in_channels != out_channels:    
+            self.residule = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, 
+                kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.Dropout(0.2)
+            )
+
+    def forward(self, X):
+        # save for residual connection
+        out = F.relu(self.dropout_1(self.bn1(self.conv1(X))))
+        # relu layer
+        out = self.dropout_2(self.bn2(self.conv2(out)))
+        out += self.residule(X)
+        out = F.relu(out)
+        return out
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -114,7 +146,7 @@ class ResNet(nn.Module):
 
 
 def ResNet18(classes):
-    return ResNet(BasicBlock, [2,2,2,2], num_classes=classes)
+    return ResNet(ResidualBlock, [2,2,2,2], num_classes=classes)
 
 
 def ResNet50(classes):
