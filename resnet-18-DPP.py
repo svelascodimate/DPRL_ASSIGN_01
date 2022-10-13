@@ -235,9 +235,9 @@ def train_model(rank, args):
 def run_train_model(training_func, world_size):
 
   ## initialize Default hyper-parameters
-  num_epoches = 10
+  num_epoches = 150
   decay = 0.01
-  learning_rate = 0.0001
+  learning_rate = 0.001
   batch_size = 50
 
   parser = argparse.ArgumentParser("PyTorch - Training RESNET on CIFAR10 Dataset")
