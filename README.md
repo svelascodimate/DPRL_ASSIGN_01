@@ -36,8 +36,8 @@ Wandb was used to log the total accuracy and loss metrics, as well as local acur
 ## Run the models
 - Execute the follwing commands:
     ```bash
-    python3 conv2d-DPP.py
+    nohup python3 conv2d-DPP.py > conv2d-DPP.txt &
     ```
     ```bash
-    python3 resnet-18-DPP.py
+    nohup python3 resnet-18-DPP.py > resnet-18-DPP.txt &
     ```
