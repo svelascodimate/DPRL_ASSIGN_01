@@ -75,7 +75,7 @@ def adjust_learning_rate(learning_rate, optimizer, epoch, decay):
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '12355'
+    os.environ['MASTER_PORT'] = '12356'
     # initialize the process group
     dist.init_process_group(backend="gloo", rank=rank, world_size=world_size)
 
@@ -236,7 +236,7 @@ def train_model(rank, args):
 def run_train_model(training_func, world_size):
 
   ## initialize Default hyper-parameters
-  num_epoches = 20
+  num_epoches = 150
   decay = 0.01
   learning_rate = 0.0001
   batch_size = 50
